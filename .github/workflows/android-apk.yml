@@ -54,7 +54,7 @@ jobs:
       - name: Installer le SDK Android (cmdline-tools)
         uses: android-actions/setup-android@v3
         with:
-          cmdline-tools-version: latest
+          cmdline-tools-version: "13.0"
           accept-android-sdk-licenses: true
 
       - name: Accepter les licences et installer les packages SDK
