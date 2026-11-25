@@ -38,6 +38,7 @@ import com.hierynomus.mssmb2.SMB2CreateDisposition;
 import com.hierynomus.msfscc.fileinformation.FileStandardInformation;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 
 import net.schmizz.sshj.SSHClient;
 import net.schmizz.sshj.sftp.RemoteFile;
@@ -138,11 +139,13 @@ public class LanFilesPlugin extends Plugin {
                     Session session = conn.authenticate(new AuthenticationContext(call.getString("user", ""), call.getString("pass", "").toCharArray(), call.getString("domain", "")));
                     DiskShare share = (DiskShare) session.connectShare(call.getString("share", ""));
                     try {
+                        Set<AccessMask> access = EnumSet.of(AccessMask.GENERIC_READ);
+                        Set<SMB2CreateOptions> dirOpts = EnumSet.of(SMB2CreateOptions.FILE_DIRECTORY_FILE);
                         Directory dir = share.openDirectory(
                                 path,
-                                EnumSet.of(AccessMask.GENERIC_READ),
+                                access,
                                 null,
-                                EnumSet.of(SMB2CreateOptions.FILE_DIRECTORY_FILE),
+                                dirOpts,
                                 SMB2CreateDisposition.FILE_OPEN,
                                 null);
                         List<?> entries = dir.list();
@@ -191,7 +194,7 @@ public class LanFilesPlugin extends Plugin {
                         JSObject o = new JSObject();
                         o.put("name", e.getName());
                         o.put("path", path + (path.endsWith("/") || path.isEmpty() ? "" : "/") + e.getName());
-                        o.put("isDir", e.getAttributes().isDirectory());
+                        o.put("isDir", e.isDirectory());
                         o.put("size", e.getAttributes().getSize());
                         arr.put(o);
                     }
@@ -333,11 +336,13 @@ public class LanFilesPlugin extends Plugin {
             conn = client.connect(call.getString("host"), call.getInt("port", 445));
             session = conn.authenticate(new AuthenticationContext(call.getString("user", ""), call.getString("pass", "").toCharArray(), call.getString("domain", "")));
             share = (DiskShare) session.connectShare(call.getString("share", ""));
+            Set<AccessMask> access = EnumSet.of(AccessMask.GENERIC_READ);
+            Set<SMB2CreateOptions> fileOpts = EnumSet.of(SMB2CreateOptions.FILE_NON_DIRECTORY_FILE);
             file = share.openFile(
                     call.getString("path", ""),
-                    EnumSet.of(AccessMask.GENERIC_READ),
+                    access,
                     null,
-                    EnumSet.of(SMB2CreateOptions.FILE_NON_DIRECTORY_FILE),
+                    fileOpts,
                     SMB2CreateDisposition.FILE_OPEN,
                     null);
         }
