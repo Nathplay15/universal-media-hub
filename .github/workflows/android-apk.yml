@@ -45,11 +45,11 @@ jobs:
       - name: Build web + packages
         run: npm run build
 
-      - name: Installer le JDK 17
+      - name: Installer le JDK 21 (requis par le template Capacitor 7.4)
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
+          java-version: 21
 
       - name: Licences et packages SDK Android (SDK préinstallé du runner)
         run: |
