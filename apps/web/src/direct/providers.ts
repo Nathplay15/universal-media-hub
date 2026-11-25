@@ -71,16 +71,24 @@ class JellyfinDirect implements DirectProvider {
   }
 
   async init(): Promise<void> {
-    if (!this.source.baseUrl) throw new Error('baseUrl requis');
+    if (!this.source.baseUrl) throw new Error('URL du serveur requise (ex: http://192.168.1.10:8096)');
     this.base = this.source.baseUrl.replace(/\/+$/, '');
     if (this.source.token) {
       this.token = this.source.token;
     } else if (this.source.username) {
-      const auth = await fetchJson<{ AccessToken: string; User: { Id: string } }>(`${this.base}/Users/AuthenticateByName`, {
+      const res = await fetch(`${this.base}/Users/AuthenticateByName`, {
         method: 'POST',
-        headers: { 'X-Emby-Authorization': 'MediaBrowser Client="MediaHub", Device="android", DeviceId="mediahub-apk", Version="1.0"' },
-        body: { Username: this.source.username, Pw: this.source.password ?? '' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Emby-Authorization': 'MediaBrowser Client="MediaHub", Device="Android", DeviceId="mediahub-apk-1", Version="1.0.0"',
+        },
+        body: JSON.stringify({ Username: this.source.username, Pw: this.source.password ?? '' }),
       });
+      if (!res.ok) {
+        const t = await res.text().catch(() => '');
+        throw new Error(`Authentification ${this.source.type} : HTTP ${res.status}${t ? ' — ' + t.slice(0, 200) : ''} (vérifie l'URL, le port, et l'utilisateur/mot de passe)`);
+      }
+      const auth = (await res.json()) as { AccessToken: string; User: { Id: string } };
       this.token = auth.AccessToken;
       this.userId = auth.User.Id;
     } else {

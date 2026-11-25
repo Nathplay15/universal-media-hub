@@ -14,7 +14,15 @@ export async function fetchJson<T>(
       body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
       signal: ctrl.signal,
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText} pour ${url}`);
+    if (!res.ok) {
+      let detail = '';
+      try {
+        detail = (await res.text()).slice(0, 300);
+      } catch {
+        /* pas de corps */
+      }
+      throw new Error(`HTTP ${res.status} ${res.statusText} — ${url}${detail ? ` — ${detail}` : ''}`);
+    }
     return (await res.json()) as T;
   } finally {
     clearTimeout(t);
