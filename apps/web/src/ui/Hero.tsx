@@ -1,7 +1,7 @@
 import { useContext } from 'react';
 import type { MediaItem } from '@umh/types';
 import { AppCtx, navigate } from '../App';
-import { absUrl } from '../api';
+import { absUrl } from '../backend';
 import { Icon } from './icons';
 import { formatDuration } from './MediaCard';
 

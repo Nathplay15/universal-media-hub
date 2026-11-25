@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from 'react';
 import type { Library, MediaItem, ProgressEntry } from '@umh/types';
-import { fetchContinue, fetchLibraryItems, fetchProviders } from '../api';
+import { fetchContinue, fetchLibraryItems, fetchProviders } from '../backend';
 import { AppCtx, navigate } from '../App';
 import Hero from '../ui/Hero';
 import Row from '../ui/Row';

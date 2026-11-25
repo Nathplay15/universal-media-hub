@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Hls from 'hls.js';
+import { Capacitor } from '@capacitor/core';
 import type { MediaItem, StreamInfo, SubtitleTrack } from '@umh/types';
-import { fetchProgress, saveProgress } from '../api';
+import { fetchProgress, saveProgress } from '../backend';
+import { Cast } from '../plugins';
 import { subtitleTrackUrl } from './srt';
 import { Icon } from '../ui/icons';
 import { formatDuration } from '../ui/MediaCard';
@@ -67,6 +69,7 @@ export default function VideoPlayer({ refId, item, stream, onExit }: Props) {
   const [gestureInd, setGestureInd] = useState<{ icon: string; text: string } | null>(null);
   const [brightness, setBrightness] = useState(1);
   const [allStreams, setAllStreams] = useState<{ index: number; label: string; url: string }[]>([]);
+  const [castOn, setCastOn] = useState(false);
 
   const v = () => videoRef.current;
 
@@ -604,6 +607,28 @@ export default function VideoPlayer({ refId, item, stream, onExit }: Props) {
             {(levels.length > 1 || allStreams.length > 1) && (
               <button className="pbtn" onClick={() => { setMenu(menu === 'quality' ? null : 'quality'); showUi(); }} title="Qualité / flux">
                 <Icon name="layers" size={22} />
+              </button>
+            )}
+            {Capacitor.isNativePlatform() && stream.url && !stream.url.startsWith('http://127.0.0.1') && (
+              <button
+                className={`pbtn ${castOn ? 'active' : ''}`}
+                title="Caster sur Chromecast (connecte d'abord un Chromecast via le menu Cast d'Android)"
+                onClick={async () => {
+                  try {
+                    if (castOn) {
+                      await Cast.stop();
+                      setCastOn(false);
+                    } else {
+                      await Cast.cast({ url: stream.url!, contentType: stream.mimeType ?? 'video/mp4', title });
+                      setCastOn(true);
+                    }
+                  } catch (e) {
+                    setError((e as Error).message);
+                  }
+                  showUi();
+                }}
+              >
+                <Icon name="cast" size={22} />
               </button>
             )}
             {document.pictureInPictureEnabled && (

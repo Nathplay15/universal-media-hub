@@ -1,6 +1,6 @@
 import { createContext, useCallback, useEffect, useMemo, useState } from 'react';
 import type { Library, MediaItem } from '@umh/types';
-import { fetchLibraries } from './api';
+import { fetchLibraries } from './backend';
 import Layout from './ui/Layout';
 import Home from './pages/Home';
 import LibraryPage from './pages/LibraryPage';

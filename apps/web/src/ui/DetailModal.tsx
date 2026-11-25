@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from 'react';
 import type { MediaItem } from '@umh/types';
-import { absUrl, fetchChildren, fetchItem } from '../api';
+import { absUrl, fetchChildren, fetchItem } from '../backend';
 import { AppCtx, navigate } from '../App';
 import { Icon } from './icons';
 import { formatDuration, typeLabel } from './MediaCard';

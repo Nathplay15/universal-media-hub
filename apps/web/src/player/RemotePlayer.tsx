@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MediaItem } from '@umh/types';
-import { remoteControl } from '../api';
+import { remoteControl } from '../backend';
 import { Icon } from '../ui/icons';
 
 function fmtTime(sec: number): string {

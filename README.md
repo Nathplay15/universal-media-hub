@@ -98,3 +98,14 @@ Configurez l'URL de votre serveur MediaHub dans l'app Android via `localStorage`
 3. Démarrer le serveur MediaHub sur la machine/NAS : `docker compose up -d --build` (ou `npm run dev:server`), port **4000**
 4. Dans l'app APK → **Sources & réglages** → champ « URL du serveur » : saisir `http://<IP_LAN>:4000` (ex `http://192.168.1.10:4000`) → Enregistrer
 5. Ajouter vos sources (dossier local `/media`, Jellyfin, Plex…) → Accueil → lire une vidéo
+
+## Mode 100 % autonome (APK sans serveur)
+
+L'app embarque un moteur « direct » : dans **Sources & réglages → Mode « Autonome (APK) »**, ajoute :
+- **Jellyfin / Emby / Plex / Kodi / WebDAV** : appels HTTP directs depuis le téléphone (tokens chiffrés en local, WebCrypto AES-GCM)
+- **SMB, FTP, SFTP** : plugins natifs (smbj, commons-net, sshj) + proxy HTTP local (NanoHTTPD) avec Range → lisible dans le lecteur et seekable
+- **UPnP/DLNA** : découverte SSDP + browsing ContentDirectory (SOAP) natifs
+- **Chromecast** : bouton cast dans le lecteur (Cast SDK, receiver par défaut)
+- Kodi : bibliothèque + télécommande (Player.Open/PlayPause/Seek) en JSON-RPC direct
+
+En mode autonome, la progression de lecture est stockée localement (localStorage). Le mode « Via serveur » reste disponible pour tout centraliser sur un NAS.

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { ProviderConfig, ProviderStatus, ProviderType } from '@umh/types';
-import { apiBase, deleteProvider, fetchProviders, saveProvider, setApiBase, testProvider } from '../api';
+import { apiBase, deleteProvider, fetchProviders, isDirectMode, saveProvider, setApiBase, setMode, testProvider } from '../backend';
 import { Icon } from '../ui/icons';
+import DirectSources from '../ui/DirectSources';
 
 const TYPE_META: Record<ProviderType, { label: string; icon: string; desc: string }> = {
   local: { label: 'Stockage local', icon: 'hdd', desc: 'Dossiers de votre machine (montages SMB/NFS inclus)' },
@@ -64,6 +65,7 @@ export default function SettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [serverUrl, setServerUrl] = useState<string>(() => apiBase());
+  const [mode, setModeState] = useState<'direct' | 'server'>(() => (isDirectMode() ? 'direct' : 'server'));
 
   const refresh = () => fetchProviders().then(setProviders).catch(() => {});
 
@@ -133,6 +135,31 @@ export default function SettingsPage() {
       <div style={{ color: 'var(--text-faint)', fontSize: '0.78rem', margin: '-6px 0 16px 4px' }}>
         URL du serveur MediaHub — indispensable dans l'app Android (APK) pour joindre votre serveur (ex: http://IP_LAN:4000).
       </div>
+      <div className="provider-card">
+        <div className="provider-icon">
+          <Icon name="cast" size={22} />
+        </div>
+        <div className="provider-info">
+          <div className="provider-name">Mode de fonctionnement</div>
+          <div className="provider-sub">
+            {mode === 'direct'
+              ? '100 % autonome : l’app contacte directement Jellyfin, Emby, Plex, Kodi, WebDAV, SMB, FTP, SFTP, DLNA… aucun serveur requis'
+              : 'Via un serveur MediaHub (API /api sur le port 4000)'}
+          </div>
+        </div>
+        <div className="provider-actions">
+          <button className={`btn btn-small ${mode === 'direct' ? 'btn-accent' : 'btn-ghost'}`} onClick={() => { setMode('direct'); setModeState('direct'); }}>
+            Autonome (APK)
+          </button>
+          <button className={`btn btn-small ${mode === 'server' ? 'btn-accent' : 'btn-ghost'}`} onClick={() => { setMode('server'); setModeState('server'); }}>
+            Via serveur
+          </button>
+        </div>
+      </div>
+      {mode === 'direct' ? (
+        <DirectSources />
+      ) : (
+        <>
       {notice && <div className="error-box" style={{ borderColor: 'rgba(34,197,94,.4)', background: 'rgba(34,197,94,.1)', color: '#86efac' }}><Icon name="check" size={20} /><div>{notice}</div></div>}
       <button className="btn btn-accent" style={{ marginBottom: 20 }} onClick={() => { setError(null); setEditing(emptyForm('local')); }}>
         <Icon name="plus" size={18} /> Ajouter une source
@@ -168,6 +195,8 @@ export default function SettingsPage() {
         );
       })}
       {providers.length === 0 && <div className="empty"><div className="big">🔌</div><p>Aucune source configurée pour le moment.</p></div>}
+      </>
+      )}
 
       {editing && (
         <div className="form-modal-backdrop" onClick={() => setEditing(null)}>

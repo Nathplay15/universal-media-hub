@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from 'react';
 import type { MediaItem } from '@umh/types';
-import { fetchLibraries, fetchLibraryItems } from '../api';
+import { fetchLibraries, fetchLibraryItems } from '../backend';
 import { AppCtx } from '../App';
 import MediaCard from '../ui/MediaCard';
 import { Icon } from '../ui/icons';

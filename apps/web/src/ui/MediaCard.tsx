@@ -1,7 +1,7 @@
 import { useContext } from 'react';
 import type { MediaItem } from '@umh/types';
 import { AppCtx } from '../App';
-import { absUrl } from '../api';
+import { absUrl } from '../backend';
 
 export function formatDuration(sec?: number): string {
   if (!sec || !isFinite(sec)) return '';

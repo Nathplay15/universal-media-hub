@@ -1,6 +1,6 @@
 import { useContext, useEffect, useRef, useState } from 'react';
 import type { MediaItem } from '@umh/types';
-import { search } from '../api';
+import { search } from '../backend';
 import { AppCtx } from '../App';
 import MediaCard from './MediaCard';
 import { Icon } from './icons';

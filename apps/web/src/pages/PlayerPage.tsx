@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { MediaItem, StreamInfo } from '@umh/types';
-import { fetchItem, fetchStream } from '../api';
+import { fetchItem, fetchStream } from '../backend';
 import { navigate } from '../App';
 import VideoPlayer from '../player/VideoPlayer';
 import RemotePlayer from '../player/RemotePlayer';
