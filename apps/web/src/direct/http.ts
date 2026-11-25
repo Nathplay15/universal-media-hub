@@ -17,7 +17,7 @@ export async function fetchJson<T>(
     if (!res.ok) {
       let detail = '';
       try {
-        detail = (await res.text()).slice(0, 300);
+        detail = (await res.text()).slice(0, 500);
       } catch {
         /* pas de corps */
       }

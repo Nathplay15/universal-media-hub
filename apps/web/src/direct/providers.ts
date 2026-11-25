@@ -180,14 +180,27 @@ class JellyfinDirect implements DirectProvider {
     };
   }
 
+  private libType(ct?: string): Library['type'] {
+    return ct === 'movies' ? 'movie' : ct === 'tvshows' ? 'show' : ct === 'music' ? 'track' : ct === 'livetv' ? 'channel' : 'video';
+  }
+
   async listLibraries(): Promise<Library[]> {
     await this.init();
+    if (this.userId) {
+      try {
+        const views = await fetchJson<{ Items?: { Name: string; Id: string; CollectionType?: string }[] }>(`${this.base}/Users/${this.userId}/Views`, { headers: this.headers() });
+        const libs = (views.Items ?? []).map((v) => ({ id: v.Id, provider: this.source.id, name: v.Name, type: this.libType(v.CollectionType) }));
+        if (libs.length) return libs;
+      } catch {
+        /* repli sur VirtualFolders (admin) */
+      }
+    }
     const folders = await fetchJson<{ Name: string; ItemId?: string; CollectionType?: string }[]>(`${this.base}/Library/VirtualFolders`, { headers: this.headers() });
     return folders.map((f) => ({
       id: f.ItemId ?? f.Name,
       provider: this.source.id,
       name: f.Name,
-      type: f.CollectionType === 'movies' ? 'movie' : f.CollectionType === 'tvshows' ? 'show' : 'video',
+      type: this.libType(f.CollectionType),
     }));
   }
 
