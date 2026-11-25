@@ -77,17 +77,15 @@ public class CastPlugin extends Plugin {
                 .setContentType(contentType)
                 .setMetadata(metadata)
                 .build();
-        client.load(mediaInfo)
-                .addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
-                        JSObject res = new JSObject();
-                        res.put("ok", true);
-                        call.resolve(res);
-                    } else {
-                        Exception e = task.getException();
-                        call.reject("Cast: " + (e != null ? e.getMessage() : "échec inconnu"));
-                    }
-                });
+        client.load(mediaInfo).setResultCallback(result -> {
+            if (result.getStatus().isSuccess()) {
+                JSObject res = new JSObject();
+                res.put("ok", true);
+                call.resolve(res);
+            } else {
+                call.reject("Cast: " + result.getStatus().getStatusMessage());
+            }
+        });
     }
 
     @PluginMethod

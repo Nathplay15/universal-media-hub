@@ -29,9 +29,16 @@ import com.hierynomus.smbj.auth.AuthenticationContext;
 import com.hierynomus.smbj.connection.Connection;
 import com.hierynomus.smbj.session.Session;
 import com.hierynomus.smbj.share.DiskShare;
-import com.hierynomus.smbj.share.Directory;
 import com.hierynomus.smbj.share.DiskEntry;
 import com.hierynomus.smbj.share.File;
+import com.hierynomus.msdtyp.AccessMask;
+import com.hierynomus.msdtyp.FileAttribute;
+import com.hierynomus.msdtyp.SecurityInformation;
+import com.hierynomus.mssmb2.SMB2CreateOptions;
+import com.hierynomus.mssmb2.SMB2CreateDisposition;
+import com.hierynomus.msfscc.fileinformation.FileStandardInformation;
+import java.util.EnumSet;
+import java.util.List;
 
 import net.schmizz.sshj.SSHClient;
 import net.schmizz.sshj.sftp.RemoteFile;
@@ -132,10 +139,11 @@ public class LanFilesPlugin extends Plugin {
                     Session session = conn.authenticate(new AuthenticationContext(call.getString("user", ""), call.getString("pass", "").toCharArray(), call.getString("domain", "")));
                     DiskShare share = (DiskShare) session.connectShare(call.getString("share", ""));
                     try {
-                        Directory dir = share.openDirectory(path);
-                        for (DiskEntry e : dir.list()) {
-                            boolean isDir = e instanceof Directory;
-                            long size = (!isDir && e instanceof File) ? ((File) e).getEndOfFile() : 0;
+                        List<DiskEntry> entries = share.list(path, DiskEntry.class);
+                        for (DiskEntry e : entries) {
+                            FileStandardInformation info = e.getFileInformation(FileStandardInformation.class);
+                            boolean isDir = info.isDirectory();
+                            long size = isDir ? 0 : info.getEndOfFile();
                             String name = e.getFileName();
                             JSObject o = new JSObject();
                             o.put("name", name);
@@ -144,7 +152,6 @@ public class LanFilesPlugin extends Plugin {
                             o.put("size", size);
                             arr.put(o);
                         }
-                        dir.close();
                     } finally {
                         share.close();
                         session.close();
@@ -318,10 +325,16 @@ public class LanFilesPlugin extends Plugin {
             conn = client.connect(call.getString("host"), call.getInt("port", 445));
             session = conn.authenticate(new AuthenticationContext(call.getString("user", ""), call.getString("pass", "").toCharArray(), call.getString("domain", "")));
             share = (DiskShare) session.connectShare(call.getString("share", ""));
-            file = share.openFile(call.getString("path", ""));
+            file = share.openFile(
+                    call.getString("path", ""),
+                    EnumSet.of(AccessMask.GENERIC_READ),
+                    EnumSet.noneOf(FileAttribute.class),
+                    EnumSet.of(SMB2CreateOptions.FILE_NON_DIRECTORY_FILE),
+                    SMB2CreateDisposition.FILE_OPEN,
+                    EnumSet.noneOf(SecurityInformation.class));
         }
 
-        public long size() { return file.getEndOfFile(); }
+        public long size() { return file.getFileInformation(FileStandardInformation.class).getEndOfFile(); }
         public String mime() { return mimeOf(file.getFileName()); }
 
         public InputStream open(long offset) throws Exception {
