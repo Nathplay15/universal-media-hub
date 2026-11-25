@@ -54,10 +54,15 @@ jobs:
       - name: Installer le SDK Android
         uses: android-actions/setup-android@v3
         with:
-          accept-android-sdk-licenses: true
           cmdline-tools-version: latest
-          platform-version: 34
-          build-tools-version: 34.0.0
+          accept-android-sdk-licenses: true
+          packages: |
+            platform-tools
+            platforms;android-35
+            build-tools;35.0.0
+
+      - name: Accepter toutes les licences SDK
+        run: yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --licenses
 
       - name: Synchroniser Capacitor
         working-directory: apps/web
