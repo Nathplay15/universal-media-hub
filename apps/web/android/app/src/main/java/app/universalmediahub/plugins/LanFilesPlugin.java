@@ -33,7 +33,7 @@ import com.hierynomus.smbj.share.Directory;
 import com.hierynomus.smbj.share.DiskEntry;
 import com.hierynomus.smbj.share.File;
 import com.hierynomus.msdtyp.AccessMask;
-import com.hierynomus.mssmb2.SMB2CreateOptions;
+import com.hierynomus.mssmb2.SMB2ShareAccess;
 import com.hierynomus.mssmb2.SMB2CreateDisposition;
 import com.hierynomus.msfscc.fileinformation.FileStandardInformation;
 import java.util.EnumSet;
@@ -140,12 +140,12 @@ public class LanFilesPlugin extends Plugin {
                     DiskShare share = (DiskShare) session.connectShare(call.getString("share", ""));
                     try {
                         Set<AccessMask> access = EnumSet.of(AccessMask.GENERIC_READ);
-                        Set<SMB2CreateOptions> dirOpts = EnumSet.of(SMB2CreateOptions.FILE_DIRECTORY_FILE);
+                        Set<SMB2ShareAccess> shareAccess = EnumSet.of(SMB2ShareAccess.FILE_READ_DATA);
                         Directory dir = share.openDirectory(
                                 path,
                                 access,
                                 null,
-                                dirOpts,
+                                shareAccess,
                                 SMB2CreateDisposition.FILE_OPEN,
                                 null);
                         List<?> entries = dir.list();
@@ -337,12 +337,12 @@ public class LanFilesPlugin extends Plugin {
             session = conn.authenticate(new AuthenticationContext(call.getString("user", ""), call.getString("pass", "").toCharArray(), call.getString("domain", "")));
             share = (DiskShare) session.connectShare(call.getString("share", ""));
             Set<AccessMask> access = EnumSet.of(AccessMask.GENERIC_READ);
-            Set<SMB2CreateOptions> fileOpts = EnumSet.of(SMB2CreateOptions.FILE_NON_DIRECTORY_FILE);
+            Set<SMB2ShareAccess> fileAccess = EnumSet.of(SMB2ShareAccess.FILE_READ_DATA);
             file = share.openFile(
                     call.getString("path", ""),
                     access,
                     null,
-                    fileOpts,
+                    fileAccess,
                     SMB2CreateDisposition.FILE_OPEN,
                     null);
         }
