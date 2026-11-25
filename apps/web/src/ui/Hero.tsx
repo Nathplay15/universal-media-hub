@@ -1,6 +1,7 @@
 import { useContext } from 'react';
 import type { MediaItem } from '@umh/types';
 import { AppCtx, navigate } from '../App';
+import { absUrl } from '../api';
 import { Icon } from './icons';
 import { formatDuration } from './MediaCard';
 
@@ -8,7 +9,7 @@ export default function Hero({ item }: { item: MediaItem }) {
   const { openItem } = useContext(AppCtx);
   return (
     <header className="hero">
-      <div className="hero-bg">{item.backdrop && <img src={item.backdrop} alt="" referrerPolicy="no-referrer" />}</div>
+      <div className="hero-bg">{item.backdrop && <img src={absUrl(item.backdrop)} alt="" referrerPolicy="no-referrer" />}</div>
       <div className="hero-content">
         <div className="hero-kicker">À la une</div>
         <h1 className="hero-title">{item.title}</h1>

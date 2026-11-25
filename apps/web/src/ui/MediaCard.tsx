@@ -1,6 +1,7 @@
 import { useContext } from 'react';
 import type { MediaItem } from '@umh/types';
 import { AppCtx } from '../App';
+import { absUrl } from '../api';
 
 export function formatDuration(sec?: number): string {
   if (!sec || !isFinite(sec)) return '';
@@ -19,7 +20,7 @@ export default function MediaCard({ item, progress }: { item: MediaItem; progres
   return (
     <button className="card" onClick={() => openItem(item)} title={item.title}>
       <div className="card-poster">
-        {item.poster ? <img src={item.poster} loading="lazy" alt={item.title} referrerPolicy="no-referrer" /> : <div className="card-fallback"><span>{item.title}</span></div>}
+        {item.poster ? <img src={absUrl(item.poster)} loading="lazy" alt={item.title} referrerPolicy="no-referrer" /> : <div className="card-fallback"><span>{item.title}</span></div>}
         {p !== undefined && p > 0.01 && p < 0.99 && (
           <div className="card-progress">
             <div style={{ width: `${Math.min(100, Math.round(p * 100))}%` }} />

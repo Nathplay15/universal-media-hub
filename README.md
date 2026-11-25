@@ -90,3 +90,11 @@ Configurez l'URL de votre serveur MediaHub dans l'app Android via `localStorage`
 - [ ] Profils multi-utilisateurs, droits par bibliothèque
 - [ ] Casting (Chromecast / DLNA), app iOS
 - [ ] Métadonnées enrichies (TMDB) pour les fichiers locaux
+
+## Tester l'APK Android
+
+1. Télécharger l'artifact `mediahub-app-debug-apk` : onglet **Actions** → run « CI — tests + APK Android » → Artifacts (ou `gh api repos/<owner>/<repo>/actions/artifacts/<id>/zip > umh.zip && unzip umh.zip`)
+2. Installer sur le téléphone : `adb install app-debug.apk` (USB débogage) ou transférer le fichier et autoriser « sources inconnues »
+3. Démarrer le serveur MediaHub sur la machine/NAS : `docker compose up -d --build` (ou `npm run dev:server`), port **4000**
+4. Dans l'app APK → **Sources & réglages** → champ « URL du serveur » : saisir `http://<IP_LAN>:4000` (ex `http://192.168.1.10:4000`) → Enregistrer
+5. Ajouter vos sources (dossier local `/media`, Jellyfin, Plex…) → Accueil → lire une vidéo

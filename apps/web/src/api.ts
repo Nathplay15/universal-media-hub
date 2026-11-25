@@ -1,7 +1,33 @@
 import type { Library, ListResult, MediaItem, ProgressEntry, ProviderConfig, ProviderStatus, StreamInfo } from '@umh/types';
 
+export function apiBase(): string {
+  try {
+    return (localStorage.getItem('umh_api_base') ?? '').replace(/\/+$/, '');
+  } catch {
+    return '';
+  }
+}
+
+export function setApiBase(v: string): void {
+  try {
+    localStorage.setItem('umh_api_base', v.trim().replace(/\/+$/, ''));
+  } catch {
+    /* stockage indisponible */
+  }
+}
+
+export function apiUrl(path: string): string {
+  return `${apiBase()}/api${path}`;
+}
+
+export function absUrl(u?: string): string | undefined {
+  if (!u) return u;
+  if (u.startsWith('/api/')) return `${apiBase()}${u}`;
+  return u;
+}
+
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`/api${path}`, {
+  const res = await fetch(apiUrl(path), {
     ...init,
     headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
   });
@@ -39,5 +65,5 @@ export const remoteControl = (ref: string, action: string, value?: number) =>
   api<{ ok: boolean }>('/remote', { method: 'POST', body: JSON.stringify({ ref, action, value }) });
 
 export function playUrl(ref: string): string {
-  return `/api/play?ref=${encodeURIComponent(ref)}`;
+  return `${apiBase()}/api/play?ref=${encodeURIComponent(ref)}`;
 }

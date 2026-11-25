@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ProviderConfig, ProviderStatus, ProviderType } from '@umh/types';
-import { deleteProvider, fetchProviders, saveProvider, testProvider } from '../api';
+import { apiBase, deleteProvider, fetchProviders, saveProvider, setApiBase, testProvider } from '../api';
 import { Icon } from '../ui/icons';
 
 const TYPE_META: Record<ProviderType, { label: string; icon: string; desc: string }> = {
@@ -63,6 +63,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [serverUrl, setServerUrl] = useState<string>(() => apiBase());
 
   const refresh = () => fetchProviders().then(setProviders).catch(() => {});
 
@@ -106,6 +107,32 @@ export default function SettingsPage() {
     <div className="settings">
       <h1>Sources & réglages</h1>
       <p className="sub">Connectez tous vos services multimédia : ils seront agrégés dans une seule bibliothèque, avec recherche fédérée et lecture universelle.</p>
+      <div className="provider-card">
+        <div className="provider-icon">
+          <Icon name="globe" size={22} />
+        </div>
+        <div className="provider-info" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <input
+            style={{ flex: 1 }}
+            value={serverUrl}
+            onChange={(e) => setServerUrl(e.target.value)}
+            placeholder="http://192.168.1.10:4000 (vide = même serveur, ex: navigateur)"
+          />
+          <button
+            className="btn btn-ghost btn-small"
+            onClick={() => {
+              setApiBase(serverUrl);
+              setNotice(serverUrl ? `URL du serveur enregistrée : ${apiBase()}` : 'URL du serveur vidée (mode relatif / navigateur)');
+              refresh();
+            }}
+          >
+            <Icon name="check" size={16} /> Enregistrer
+          </button>
+        </div>
+      </div>
+      <div style={{ color: 'var(--text-faint)', fontSize: '0.78rem', margin: '-6px 0 16px 4px' }}>
+        URL du serveur MediaHub — indispensable dans l'app Android (APK) pour joindre votre serveur (ex: http://IP_LAN:4000).
+      </div>
       {notice && <div className="error-box" style={{ borderColor: 'rgba(34,197,94,.4)', background: 'rgba(34,197,94,.1)', color: '#86efac' }}><Icon name="check" size={20} /><div>{notice}</div></div>}
       <button className="btn btn-accent" style={{ marginBottom: 20 }} onClick={() => { setError(null); setEditing(emptyForm('local')); }}>
         <Icon name="plus" size={18} /> Ajouter une source

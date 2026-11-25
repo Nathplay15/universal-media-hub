@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from 'react';
 import type { MediaItem } from '@umh/types';
-import { fetchChildren, fetchItem } from '../api';
+import { absUrl, fetchChildren, fetchItem } from '../api';
 import { AppCtx, navigate } from '../App';
 import { Icon } from './icons';
 import { formatDuration, typeLabel } from './MediaCard';
@@ -54,14 +54,14 @@ export default function DetailModal({ item, onClose }: { item: MediaItem; onClos
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-hero">
-          {detail.backdrop && <img src={detail.backdrop} alt="" referrerPolicy="no-referrer" />}
+          {detail.backdrop && <img src={absUrl(detail.backdrop)} alt="" referrerPolicy="no-referrer" />}
           <button className="modal-close" onClick={onClose} aria-label="Fermer">
             <Icon name="x" size={20} />
           </button>
         </div>
         <div className="modal-body">
           <div className="modal-poster">
-            {detail.poster ? <img src={detail.poster} alt={detail.title} referrerPolicy="no-referrer" /> : <div className="card-fallback"><span>{detail.title}</span></div>}
+            {detail.poster ? <img src={absUrl(detail.poster)} alt={detail.title} referrerPolicy="no-referrer" /> : <div className="card-fallback"><span>{detail.title}</span></div>}
           </div>
           <div className="modal-info">
             <h2>{detail.title}</h2>
