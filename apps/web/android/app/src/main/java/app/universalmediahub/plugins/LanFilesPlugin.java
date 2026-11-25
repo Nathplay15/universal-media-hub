@@ -26,9 +26,12 @@ import fi.iki.elonen.NanoHTTPD;
 
 import com.hierynomus.smbj.SMBClient;
 import com.hierynomus.smbj.auth.AuthenticationContext;
+import com.hierynomus.smbj.connection.Connection;
 import com.hierynomus.smbj.session.Session;
 import com.hierynomus.smbj.share.DiskShare;
-import com.hierynomus.smbj.filesystem.SmbFile;
+import com.hierynomus.smbj.share.Directory;
+import com.hierynomus.smbj.share.DiskEntry;
+import com.hierynomus.smbj.share.File;
 
 import net.schmizz.sshj.SSHClient;
 import net.schmizz.sshj.sftp.RemoteFile;
@@ -124,19 +127,29 @@ public class LanFilesPlugin extends Plugin {
                 String path = call.getString("path", "");
                 JSArray arr = new JSArray();
                 if ("smb".equals(type)) {
-                    try (SMBClient client = new SMBClient();
-                         Session session = client.connect(call.getString("host"), call.getInt("port", 445))) {
-                        session.authenticate(new AuthenticationContext(call.getString("user", ""), (call.getString("pass", "")).toCharArray(), call.getString("domain", "")));
-                        DiskShare share = (DiskShare) session.connectShare(call.getString("share", ""));
-                        SmbFile dir = new SmbFile(share, path);
-                        for (SmbFile f : dir.listFiles()) {
+                    SMBClient client = new SMBClient();
+                    Connection conn = client.connect(call.getString("host"), call.getInt("port", 445));
+                    Session session = conn.authenticate(new AuthenticationContext(call.getString("user", ""), call.getString("pass", "").toCharArray(), call.getString("domain", "")));
+                    DiskShare share = (DiskShare) session.connectShare(call.getString("share", ""));
+                    try {
+                        Directory dir = share.openDirectory(path);
+                        for (DiskEntry e : dir.list()) {
+                            boolean isDir = e instanceof Directory;
+                            long size = (!isDir && e instanceof File) ? ((File) e).getEndOfFile() : 0;
+                            String name = e.getFileName();
                             JSObject o = new JSObject();
-                            o.put("name", f.getName());
-                            o.put("path", path + (path.endsWith("/") || path.isEmpty() ? "" : "/") + f.getName());
-                            o.put("isDir", f.isDirectory());
-                            o.put("size", f.isDirectory() ? 0 : f.length());
+                            o.put("name", name);
+                            o.put("path", path + (path.endsWith("/") || path.isEmpty() ? "" : "/") + name);
+                            o.put("isDir", isDir);
+                            o.put("size", size);
                             arr.put(o);
                         }
+                        dir.close();
+                    } finally {
+                        share.close();
+                        session.close();
+                        conn.close();
+                        client.close();
                     }
                 } else if ("ftp".equals(type)) {
                     FTPClient ftp = new FTPClient();
@@ -296,19 +309,20 @@ public class LanFilesPlugin extends Plugin {
 
     static class SmbResource implements RemoteResource {
         private final SMBClient client = new SMBClient();
+        private final Connection conn;
         private final Session session;
         private final DiskShare share;
-        private final SmbFile file;
+        private final File file;
 
         SmbResource(PluginCall call) throws Exception {
-            session = client.connect(call.getString("host"), call.getInt("port", 445));
-            session.authenticate(new AuthenticationContext(call.getString("user", ""), call.getString("pass", "").toCharArray(), call.getString("domain", "")));
+            conn = client.connect(call.getString("host"), call.getInt("port", 445));
+            session = conn.authenticate(new AuthenticationContext(call.getString("user", ""), call.getString("pass", "").toCharArray(), call.getString("domain", "")));
             share = (DiskShare) session.connectShare(call.getString("share", ""));
-            file = new SmbFile(share, call.getString("path", ""));
+            file = share.openFile(call.getString("path", ""));
         }
 
-        public long size() { return file.length(); }
-        public String mime() { return mimeOf(file.getName()); }
+        public long size() { return file.getEndOfFile(); }
+        public String mime() { return mimeOf(file.getFileName()); }
 
         public InputStream open(long offset) throws Exception {
             InputStream in = file.getInputStream();
@@ -325,8 +339,10 @@ public class LanFilesPlugin extends Plugin {
         }
 
         public void close() {
+            try { file.close(); } catch (Exception ignored) {}
             try { share.close(); } catch (Exception ignored) {}
             try { session.close(); } catch (Exception ignored) {}
+            try { conn.close(); } catch (Exception ignored) {}
             try { client.close(); } catch (Exception ignored) {}
         }
     }
