@@ -1,7 +1,7 @@
 import type { Library, ListOpts, ListResult, MediaItem, StreamInfo } from '@umh/types';
 import { Capacitor } from '@capacitor/core';
 import type { DirectSource } from './vault';
-import { fetchJson, basicAuth } from './http';
+import { fetchJson, basicAuth, timeoutSignal } from './http';
 import type { DirectProvider } from './types';
 import { LanFiles, Dlna } from '../plugins';
 
@@ -75,7 +75,7 @@ class JellyfinDirect implements DirectProvider {
     this.base = this.source.baseUrl.replace(/\/+$/, '');
 
     try {
-      const r = await fetch(`${this.base}/System/Info/Public`, { signal: AbortSignal.timeout(10000) });
+      const r = await fetch(`${this.base}/System/Info/Public`, { signal: timeoutSignal(10000) });
       if (r.status >= 500) throw new Error(`HTTP ${r.status}`);
     } catch (e) {
       throw new Error(`Serveur injoignable (${this.base}/System/Info/Public) : ${(e as Error).message} — vérifie http vs https, l'IP, le port (8096 en HTTP, 8920 en HTTPS) et le pare-feu`);
@@ -83,7 +83,7 @@ class JellyfinDirect implements DirectProvider {
 
     if (this.source.token) {
       this.token = this.source.token;
-      const r = await fetch(`${this.base}/System/Info`, { headers: this.headers(), signal: AbortSignal.timeout(10000) });
+      const r = await fetch(`${this.base}/System/Info`, { headers: this.headers(), signal: timeoutSignal(10000) });
       if (!r.ok) {
         const t = await r.text().catch(() => '');
         throw new Error(`Clé API refusée : HTTP ${r.status}${t ? ' — ' + t.slice(0, 120) : ''} — crée une clé dans Tableau de bord → Clés API`);
@@ -103,7 +103,7 @@ class JellyfinDirect implements DirectProvider {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...h },
             body,
-            signal: AbortSignal.timeout(15000),
+            signal: timeoutSignal(15000),
           });
           if (res.ok) {
             const auth = (await res.json()) as { AccessToken: string; User: { Id: string } };
@@ -125,9 +125,17 @@ class JellyfinDirect implements DirectProvider {
       throw new Error('Clé API (recommandée) ou identifiants requis');
     }
     if (!this.userId) {
-      const users = await fetchJson<{ Id: string }[]>(`${this.base}/Users`, { headers: this.headers() });
-      this.userId = users[0]?.Id ?? '';
+      try {
+        const users = await fetchJson<{ Id: string }[]>(`${this.base}/Users`, { headers: this.headers() });
+        this.userId = users[0]?.Id ?? '';
+      } catch {
+        this.userId = '';
+      }
     }
+  }
+
+  private itemsBase(): string {
+    return this.userId ? `${this.base}/Users/${this.userId}/Items` : `${this.base}/Items`;
   }
 
   async health() {
@@ -194,12 +202,12 @@ class JellyfinDirect implements DirectProvider {
       StartIndex: String(opts.offset ?? 0),
       Limit: String(opts.limit ?? 100),
     });
-    const res = await fetchJson<{ Items: JfItem[]; TotalRecordCount: number }>(`${this.base}/Users/${this.userId}/Items?${params}`, { headers: this.headers() });
+    const res = await fetchJson<{ Items: JfItem[]; TotalRecordCount: number }>(`${this.itemsBase()}?${params}`, { headers: this.headers() });
     return { items: (res.Items ?? []).map((i) => this.toItem(i)), total: res.TotalRecordCount ?? res.Items?.length ?? 0 };
   }
 
   private async itemById(id: string): Promise<JfItem> {
-    return fetchJson<JfItem>(`${this.base}/Users/${this.userId}/Items/${id}`, { headers: this.headers() });
+    return fetchJson<JfItem>(`${this.itemsBase()}/${id}`, { headers: this.headers() });
   }
 
   async getItem(localId: string): Promise<MediaItem | null> {
@@ -215,11 +223,11 @@ class JellyfinDirect implements DirectProvider {
     await this.init();
     const item = await this.itemById(localId);
     if (item.Type === 'Series') {
-      const res = await fetchJson<{ Items: JfItem[] }>(`${this.base}/Users/${this.userId}/Items?ParentId=${localId}&IncludeItemTypes=Season&SortBy=SortName`, { headers: this.headers() });
+      const res = await fetchJson<{ Items: JfItem[] }>(`${this.itemsBase()}?ParentId=${localId}&IncludeItemTypes=Season&SortBy=SortName`, { headers: this.headers() });
       return (res.Items ?? []).map((i) => this.toItem(i));
     }
     if (item.Type === 'Season') {
-      const res = await fetchJson<{ Items: JfItem[] }>(`${this.base}/Users/${this.userId}/Items?ParentId=${localId}&IncludeItemTypes=Episode&SortBy=IndexNumber&Fields=RunTimeTicks,MediaSources,SeriesName,ParentIndexNumber,IndexNumber`, { headers: this.headers() });
+      const res = await fetchJson<{ Items: JfItem[] }>(`${this.itemsBase()}?ParentId=${localId}&IncludeItemTypes=Episode&SortBy=IndexNumber&Fields=RunTimeTicks,MediaSources,SeriesName,ParentIndexNumber,IndexNumber`, { headers: this.headers() });
       return (res.Items ?? []).map((i) => this.toItem(i));
     }
     return [];
@@ -228,7 +236,7 @@ class JellyfinDirect implements DirectProvider {
   async search(q: string, limit = 40): Promise<MediaItem[]> {
     await this.init();
     const params = new URLSearchParams({ SearchTerm: q, Recursive: 'true', Limit: String(limit), IncludeItemTypes: 'Movie,Episode,Series,Audio', Fields: 'Genres,Overview,ProductionYear,ImageTags,BackdropImageTags,RunTimeTicks,SeriesName' });
-    const res = await fetchJson<{ Items: JfItem[] }>(`${this.base}/Users/${this.userId}/Items?${params}`, { headers: this.headers() });
+    const res = await fetchJson<{ Items: JfItem[] }>(`${this.itemsBase()}?${params}`, { headers: this.headers() });
     return (res.Items ?? []).map((i) => this.toItem(i));
   }
 

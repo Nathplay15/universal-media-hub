@@ -1,5 +1,5 @@
 import { useContext, useEffect, useState } from 'react';
-import type { Library, MediaItem, ProgressEntry } from '@umh/types';
+import type { Library, MediaItem, ProgressEntry, ProviderStatus } from '@umh/types';
 import { fetchContinue, fetchLibraryItems, fetchProviders } from '../backend';
 import { AppCtx, navigate } from '../App';
 import Hero from '../ui/Hero';
@@ -11,10 +11,12 @@ export default function Home() {
   const [continueWatching, setContinueWatching] = useState<ProgressEntry[]>([]);
   const [rows, setRows] = useState<{ lib: Library; items: MediaItem[] }[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [providers, setProviders] = useState<ProviderStatus[]>([]);
 
   useEffect(() => {
     fetchProviders()
       .then((ps) => {
+        setProviders(ps);
         if (ps.length === 0) setError('Aucune source configurée');
       })
       .catch(() => {});
@@ -42,6 +44,7 @@ export default function Home() {
   }, [libraries]);
 
   const heroItem = continueWatching[0]?.item ?? rows[0]?.items.find((i) => i.backdrop) ?? rows[0]?.items[0];
+  const unhealthy = providers.find((p) => p.enabled && !p.healthy);
 
   return (
     <div>
@@ -54,7 +57,19 @@ export default function Home() {
           </div>
         </div>
       )}
-      {!error && !heroItem && rows.length === 0 && (
+      {!error && unhealthy && libraries.length === 0 && (
+        <div className="error-box">
+          <Icon name="alert" size={20} />
+          <div>
+            La source « <b>{unhealthy.name}</b> » est enregistrée mais injoignable : {unhealthy.error ?? 'erreur inconnue'}
+            <div style={{ marginTop: 10, display: 'flex', gap: 8 }}>
+              <button className="btn btn-accent btn-small" onClick={refreshLibraries}><Icon name="rotate-cw" size={15} /> Réessayer</button>
+              <button className="btn btn-ghost btn-small" onClick={() => navigate('/settings')}>Modifier la source</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {!error && !unhealthy && !heroItem && rows.length === 0 && (
         <div className="empty">
           <div className="big">🎬</div>
           <p>Bienvenue dans MediaHub.<br />Connectez Plex, Jellyfin, Emby, Kodi, Streamio ou un dossier local pour commencer.</p>

@@ -32,3 +32,9 @@ export async function fetchJson<T>(
 export function basicAuth(user: string, pass: string): string {
   return btoa(`${user}:${pass}`);
 }
+
+export function timeoutSignal(ms: number): AbortSignal {
+  const ctrl = new AbortController();
+  setTimeout(() => ctrl.abort(), ms);
+  return ctrl.signal;
+}
