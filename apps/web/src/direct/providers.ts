@@ -802,7 +802,7 @@ class DlnaDirect implements DirectProvider {
   }
 
   async listItems(libraryId: string, opts: ListOpts = {}): Promise<ListResult> {
-    const r = await Dlna.browse({ deviceId: libraryId || this.deviceId, objectId: libraryId && libraryId !== this.deviceId ? libraryId : '0' });
+    const r = await Dlna.browse({ deviceId: libraryId || this.deviceId, objectId: '0' });
     const items = r.items.map((e) => this.toItem(e));
     const offset = opts.offset ?? 0;
     const limit = opts.limit ?? 100;

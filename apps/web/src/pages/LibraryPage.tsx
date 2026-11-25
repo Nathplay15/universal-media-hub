@@ -15,7 +15,9 @@ const SORTS = [
 export default function LibraryPage({ encoded }: { encoded: string }) {
   const { libraries } = useContext(AppCtx);
   const decoded = decodeURIComponent(encoded);
-  const [provider, libId] = decoded.split('/');
+  const sep = decoded.indexOf('/');
+  const provider = sep >= 0 ? decoded.slice(0, sep) : decoded;
+  const libId = sep >= 0 ? decoded.slice(sep + 1) : '';
   const lib = libraries.find((l) => l.provider === provider && l.id === libId);
   const [items, setItems] = useState<MediaItem[] | null>(null);
   const [total, setTotal] = useState(0);

@@ -1,6 +1,7 @@
 import { useContext, useEffect, useState } from 'react';
 import type { Library, MediaItem, ProgressEntry, ProviderStatus } from '@umh/types';
 import { fetchContinue, fetchLibraryItems, fetchProviders } from '../backend';
+import { providerErrors } from '../direct/engine';
 import { AppCtx, navigate } from '../App';
 import Hero from '../ui/Hero';
 import Row from '../ui/Row';
@@ -45,6 +46,7 @@ export default function Home() {
 
   const heroItem = continueWatching[0]?.item ?? rows[0]?.items.find((i) => i.backdrop) ?? rows[0]?.items[0];
   const unhealthy = providers.find((p) => p.enabled && !p.healthy);
+  const listError = libraries.length === 0 && providerErrors.size > 0 ? [...providerErrors.values()][0] : null;
 
   return (
     <div>
@@ -69,13 +71,25 @@ export default function Home() {
           </div>
         </div>
       )}
-      {!error && !unhealthy && !heroItem && rows.length === 0 && (
+      {!error && !unhealthy && !listError && !heroItem && rows.length === 0 && (
         <div className="empty">
           <div className="big">🎬</div>
           <p>Bienvenue dans MediaHub.<br />Connectez Plex, Jellyfin, Emby, Kodi, Streamio ou un dossier local pour commencer.</p>
           <button className="btn btn-accent" onClick={() => navigate('/settings')}>
             <Icon name="plus" size={18} /> Ajouter ma première source
           </button>
+        </div>
+      )}
+      {!error && !unhealthy && listError && (
+        <div className="error-box">
+          <Icon name="alert" size={20} />
+          <div>
+            Le listage des bibliothèques a échoué : {listError}
+            <div style={{ marginTop: 10, display: 'flex', gap: 8 }}>
+              <button className="btn btn-accent btn-small" onClick={refreshLibraries}><Icon name="rotate-cw" size={15} /> Réessayer</button>
+              <button className="btn btn-ghost btn-small" onClick={() => navigate('/settings')}>Réglages des sources</button>
+            </div>
+          </div>
         </div>
       )}
       {continueWatching.length > 0 && (

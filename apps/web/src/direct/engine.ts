@@ -71,13 +71,17 @@ async function enabledProviders(): Promise<DirectProvider[]> {
   return Promise.all(srcs.map((s) => Promise.resolve(makeProvider(s))));
 }
 
+export const providerErrors = new Map<string, string>();
+
 export async function listLibraries(): Promise<Library[]> {
   const out: Library[] = [];
   for (const p of await enabledProviders()) {
     try {
-      out.push(...(await p.listLibraries()));
-    } catch {
-      /* source indisponible */
+      const libs = await p.listLibraries();
+      providerErrors.delete(p.source.id);
+      out.push(...libs);
+    } catch (e) {
+      providerErrors.set(p.source.id, `${p.source.name}: ${(e as Error).message}`);
     }
   }
   return out;
