@@ -203,8 +203,12 @@ export default function DirectSources() {
             )}
             {(editing.type === 'jellyfin' || editing.type === 'emby') && (
               <>
-                <div className="field"><label>Clé API</label><input type="password" value={editing.token} onChange={(e) => setEditing({ ...editing, token: e.target.value })} /></div>
-                <div className="field"><label>Ou utilisateur</label><input value={editing.username} onChange={(e) => setEditing({ ...editing, username: e.target.value })} /></div>
+                <div className="field">
+                  <label>Clé API (recommandée)</label>
+                  <input type="password" value={editing.token} onChange={(e) => setEditing({ ...editing, token: e.target.value })} placeholder="Clé générée dans Tableau de bord → Clés API" />
+                  <div className="hint">La clé API évite les erreurs d'authentification par mot de passe depuis l'app mobile.</div>
+                </div>
+                <div className="field"><label>… ou utilisateur (si pas de clé API)</label><input value={editing.username} onChange={(e) => setEditing({ ...editing, username: e.target.value })} /></div>
                 <div className="field"><label>Mot de passe</label><input type="password" value={editing.password} onChange={(e) => setEditing({ ...editing, password: e.target.value })} /></div>
               </>
             )}

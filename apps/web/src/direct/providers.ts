@@ -73,26 +73,56 @@ class JellyfinDirect implements DirectProvider {
   async init(): Promise<void> {
     if (!this.source.baseUrl) throw new Error('URL du serveur requise (ex: http://192.168.1.10:8096)');
     this.base = this.source.baseUrl.replace(/\/+$/, '');
+
+    try {
+      const r = await fetch(`${this.base}/System/Info/Public`, { signal: AbortSignal.timeout(10000) });
+      if (r.status >= 500) throw new Error(`HTTP ${r.status}`);
+    } catch (e) {
+      throw new Error(`Serveur injoignable (${this.base}/System/Info/Public) : ${(e as Error).message} — vérifie http vs https, l'IP, le port (8096 en HTTP, 8920 en HTTPS) et le pare-feu`);
+    }
+
     if (this.source.token) {
       this.token = this.source.token;
-    } else if (this.source.username) {
-      const res = await fetch(`${this.base}/Users/AuthenticateByName`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Emby-Authorization': 'MediaBrowser Client="MediaHub", Device="Android", DeviceId="mediahub-apk-1", Version="1.0.0"',
-        },
-        body: JSON.stringify({ Username: this.source.username, Pw: this.source.password ?? '' }),
-      });
-      if (!res.ok) {
-        const t = await res.text().catch(() => '');
-        throw new Error(`Authentification ${this.source.type} : HTTP ${res.status}${t ? ' — ' + t.slice(0, 200) : ''} (vérifie l'URL, le port, et l'utilisateur/mot de passe)`);
+      const r = await fetch(`${this.base}/System/Info`, { headers: this.headers(), signal: AbortSignal.timeout(10000) });
+      if (!r.ok) {
+        const t = await r.text().catch(() => '');
+        throw new Error(`Clé API refusée : HTTP ${r.status}${t ? ' — ' + t.slice(0, 120) : ''} — crée une clé dans Tableau de bord → Clés API`);
       }
-      const auth = (await res.json()) as { AccessToken: string; User: { Id: string } };
-      this.token = auth.AccessToken;
-      this.userId = auth.User.Id;
+    } else if (this.source.username) {
+      const body = JSON.stringify({ Username: this.source.username, Pw: this.source.password ?? '' });
+      const variants: Record<string, string>[] = [
+        { 'X-Emby-Authorization': 'MediaBrowser Client="MediaHub", Device="Android", DeviceId="mediahub-apk-1", Version="1.0.0"' },
+        { 'Authorization': 'MediaBrowser Client="MediaHub", Device="Android", DeviceId="mediahub-apk-1", Version="1.0.0"' },
+        {},
+      ];
+      let lastErr = '';
+      let done = false;
+      for (const h of variants) {
+        try {
+          const res = await fetch(`${this.base}/Users/AuthenticateByName`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...h },
+            body,
+            signal: AbortSignal.timeout(15000),
+          });
+          if (res.ok) {
+            const auth = (await res.json()) as { AccessToken: string; User: { Id: string } };
+            this.token = auth.AccessToken;
+            this.userId = auth.User.Id;
+            done = true;
+            break;
+          }
+          const t = await res.text().catch(() => '');
+          lastErr = `HTTP ${res.status}${t ? ' — ' + t.slice(0, 120) : ''}`;
+        } catch (e) {
+          lastErr = (e as Error).message;
+        }
+      }
+      if (!done) {
+        throw new Error(`Authentification par identifiants échouée (${lastErr}). Astuce : utilise plutôt une Clé API (Tableau de bord → Clés API), plus fiable.`);
+      }
     } else {
-      throw new Error('Clé API ou identifiants requis');
+      throw new Error('Clé API (recommandée) ou identifiants requis');
     }
     if (!this.userId) {
       const users = await fetchJson<{ Id: string }[]>(`${this.base}/Users`, { headers: this.headers() });
