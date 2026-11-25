@@ -140,7 +140,7 @@ public class LanFilesPlugin extends Plugin {
                     DiskShare share = (DiskShare) session.connectShare(call.getString("share", ""));
                     try {
                         Set<AccessMask> access = EnumSet.of(AccessMask.GENERIC_READ);
-                        Set<SMB2ShareAccess> shareAccess = EnumSet.of(SMB2ShareAccess.FILE_READ_DATA);
+                        Set<SMB2ShareAccess> shareAccess = EnumSet.of(SMB2ShareAccess.FILE_SHARE_READ);
                         Directory dir = share.openDirectory(
                                 path,
                                 access,
@@ -337,7 +337,7 @@ public class LanFilesPlugin extends Plugin {
             session = conn.authenticate(new AuthenticationContext(call.getString("user", ""), call.getString("pass", "").toCharArray(), call.getString("domain", "")));
             share = (DiskShare) session.connectShare(call.getString("share", ""));
             Set<AccessMask> access = EnumSet.of(AccessMask.GENERIC_READ);
-            Set<SMB2ShareAccess> fileAccess = EnumSet.of(SMB2ShareAccess.FILE_READ_DATA);
+            Set<SMB2ShareAccess> fileAccess = EnumSet.of(SMB2ShareAccess.FILE_SHARE_READ);
             file = share.openFile(
                     call.getString("path", ""),
                     access,
