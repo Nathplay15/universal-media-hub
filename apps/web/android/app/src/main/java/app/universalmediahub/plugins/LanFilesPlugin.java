@@ -29,11 +29,10 @@ import com.hierynomus.smbj.auth.AuthenticationContext;
 import com.hierynomus.smbj.connection.Connection;
 import com.hierynomus.smbj.session.Session;
 import com.hierynomus.smbj.share.DiskShare;
+import com.hierynomus.smbj.share.Directory;
 import com.hierynomus.smbj.share.DiskEntry;
 import com.hierynomus.smbj.share.File;
 import com.hierynomus.msdtyp.AccessMask;
-import com.hierynomus.msdtyp.FileAttribute;
-import com.hierynomus.msdtyp.SecurityInformation;
 import com.hierynomus.mssmb2.SMB2CreateOptions;
 import com.hierynomus.mssmb2.SMB2CreateDisposition;
 import com.hierynomus.msfscc.fileinformation.FileStandardInformation;
@@ -42,8 +41,8 @@ import java.util.List;
 
 import net.schmizz.sshj.SSHClient;
 import net.schmizz.sshj.sftp.RemoteFile;
+import net.schmizz.sshj.sftp.RemoteResourceInfo;
 import net.schmizz.sshj.sftp.SFTPClient;
-import net.schmizz.sshj.sftp.SFTPDirEntry;
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -139,19 +138,28 @@ public class LanFilesPlugin extends Plugin {
                     Session session = conn.authenticate(new AuthenticationContext(call.getString("user", ""), call.getString("pass", "").toCharArray(), call.getString("domain", "")));
                     DiskShare share = (DiskShare) session.connectShare(call.getString("share", ""));
                     try {
-                        List<DiskEntry> entries = share.list(path, DiskEntry.class);
-                        for (DiskEntry e : entries) {
+                        Directory dir = share.openDirectory(
+                                path,
+                                EnumSet.of(AccessMask.GENERIC_READ),
+                                null,
+                                EnumSet.of(SMB2CreateOptions.FILE_DIRECTORY_FILE),
+                                SMB2CreateDisposition.FILE_OPEN,
+                                null);
+                        List<?> entries = dir.list();
+                        for (Object o : entries) {
+                            DiskEntry e = (DiskEntry) o;
                             FileStandardInformation info = e.getFileInformation(FileStandardInformation.class);
                             boolean isDir = info.isDirectory();
                             long size = isDir ? 0 : info.getEndOfFile();
                             String name = e.getFileName();
-                            JSObject o = new JSObject();
-                            o.put("name", name);
-                            o.put("path", path + (path.endsWith("/") || path.isEmpty() ? "" : "/") + name);
-                            o.put("isDir", isDir);
-                            o.put("size", size);
-                            arr.put(o);
+                            JSObject jo = new JSObject();
+                            jo.put("name", name);
+                            jo.put("path", path + (path.endsWith("/") || path.isEmpty() ? "" : "/") + name);
+                            jo.put("isDir", isDir);
+                            jo.put("size", size);
+                            arr.put(jo);
                         }
+                        dir.close();
                     } finally {
                         share.close();
                         session.close();
@@ -179,7 +187,7 @@ public class LanFilesPlugin extends Plugin {
                     ssh.connect(call.getString("host"), call.getInt("port", 22));
                     ssh.authPassword(call.getString("user", ""), call.getString("pass", ""));
                     SFTPClient sftp = ssh.newSFTPClient();
-                    for (SFTPDirEntry e : sftp.ls(path)) {
+                    for (RemoteResourceInfo e : sftp.ls(path)) {
                         JSObject o = new JSObject();
                         o.put("name", e.getName());
                         o.put("path", path + (path.endsWith("/") || path.isEmpty() ? "" : "/") + e.getName());
@@ -291,7 +299,7 @@ public class LanFilesPlugin extends Plugin {
                         if (!parts[0].isEmpty()) start = Long.parseLong(parts[0]);
                         if (parts.length > 1 && !parts[1].isEmpty()) end = Math.min(Long.parseLong(parts[1]), size - 1);
                         if (start >= size) {
-                            Response r = newFixedLengthResponse(Response.Status.REQUESTED_RANGE_NOT_SATISFIABLE, "text/plain", "");
+                            Response r = newFixedLengthResponse(Response.Status.RANGE_NOT_SATISFIABLE, "text/plain", "");
                             r.addHeader("Content-Range", "bytes */" + size);
                             return r;
                         }
@@ -328,10 +336,10 @@ public class LanFilesPlugin extends Plugin {
             file = share.openFile(
                     call.getString("path", ""),
                     EnumSet.of(AccessMask.GENERIC_READ),
-                    EnumSet.noneOf(FileAttribute.class),
+                    null,
                     EnumSet.of(SMB2CreateOptions.FILE_NON_DIRECTORY_FILE),
                     SMB2CreateDisposition.FILE_OPEN,
-                    EnumSet.noneOf(SecurityInformation.class));
+                    null);
         }
 
         public long size() { return file.getFileInformation(FileStandardInformation.class).getEndOfFile(); }
@@ -435,8 +443,7 @@ public class LanFilesPlugin extends Plugin {
         public String mime() { return mimeOf(path); }
 
         public InputStream open(long offset) throws IOException {
-            RemoteFile rf = sftp.open(path);
-            RemoteFile.Reader reader = rf.newReader();
+            final RemoteFile rf = sftp.open(path);
             return new InputStream() {
                 private long pos = offset;
                 private final byte[] buf = new byte[65536];
@@ -453,7 +460,7 @@ public class LanFilesPlugin extends Plugin {
                 @Override
                 public int read(byte[] b, int off, int len) throws IOException {
                     if (bufPos >= bufLen) {
-                        int n = reader.read(pos, buf, 0, buf.length);
+                        int n = rf.read(pos, buf, 0, buf.length);
                         if (n <= 0) return -1;
                         pos += n;
                         bufLen = n;
@@ -467,7 +474,7 @@ public class LanFilesPlugin extends Plugin {
 
                 @Override
                 public void close() throws IOException {
-                    try { reader.close(); } finally { rf.close(); }
+                    rf.close();
                 }
             };
         }
