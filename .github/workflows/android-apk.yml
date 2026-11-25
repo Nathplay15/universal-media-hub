@@ -51,16 +51,12 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Installer le SDK Android (cmdline-tools)
-        uses: android-actions/setup-android@v3
-        with:
-          cmdline-tools-version: "13.0"
-          accept-android-sdk-licenses: true
-
-      - name: Accepter les licences et installer les packages SDK
+      - name: Licences et packages SDK Android (SDK préinstallé du runner)
         run: |
-          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --licenses
-          "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+          SDKM=$(command -v sdkmanager || echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager")
+          yes | "$SDKM" --licenses
+          "$SDKM" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+          "$SDKM" --list_installed | head -20
 
       - name: Synchroniser Capacitor
         working-directory: apps/web
