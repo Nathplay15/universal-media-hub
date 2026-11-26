@@ -1,0 +1,18 @@
+services:
+  mediahub:
+    build: .
+    container_name: mediahub
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - UMH_DATA_DIR=/data
+      # - UMH_MASTER_KEY=<64 caractères hex> (sinon généré dans /data/.key)
+    volumes:
+      - mediahub-data:/data
+      - /mnt/nas:/media:ro
+      # Montez ici tous vos dossiers médias (SMB/NFS montés sur l'hôte), puis déclarez /media en source "local"
+
+volumes:
+  mediahub-data:
