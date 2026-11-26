@@ -67,7 +67,11 @@ class JellyfinDirect implements DirectProvider {
   constructor(public source: DirectSource) {}
 
   private headers(): Record<string, string> {
-    return { 'X-Emby-Token': this.token, 'X-MediaBrowser-Token': this.token };
+    return {
+      'X-Emby-Token': this.token,
+      'X-MediaBrowser-Token': this.token,
+      'Authorization': `MediaBrowser Token="${this.token}"`,
+    };
   }
 
   async init(): Promise<void> {
@@ -141,7 +145,7 @@ class JellyfinDirect implements DirectProvider {
   async health() {
     try {
       await this.init();
-      const info = await fetchJson<{ ServerName?: string; Version?: string }>(`${this.base}/System/Info/Public`);
+      const info = await fetchJson<{ ServerName?: string; Version?: string }>(`${this.base}/System/Info`, { headers: this.headers() });
       return { ok: true, detail: `${info.ServerName ?? this.source.type} ${info.Version ?? ''}`.trim() };
     } catch (e) {
       return { ok: false, error: (e as Error).message };
@@ -186,22 +190,28 @@ class JellyfinDirect implements DirectProvider {
 
   async listLibraries(): Promise<Library[]> {
     await this.init();
+    const errs: string[] = [];
     if (this.userId) {
       try {
         const views = await fetchJson<{ Items?: { Name: string; Id: string; CollectionType?: string }[] }>(`${this.base}/Users/${this.userId}/Views`, { headers: this.headers() });
         const libs = (views.Items ?? []).map((v) => ({ id: v.Id, provider: this.source.id, name: v.Name, type: this.libType(v.CollectionType) }));
         if (libs.length) return libs;
-      } catch {
-        /* repli sur VirtualFolders (admin) */
+      } catch (e) {
+        errs.push(`Views: ${(e as Error).message}`);
       }
     }
-    const folders = await fetchJson<{ Name: string; ItemId?: string; CollectionType?: string }[]>(`${this.base}/Library/VirtualFolders`, { headers: this.headers() });
-    return folders.map((f) => ({
-      id: f.ItemId ?? f.Name,
-      provider: this.source.id,
-      name: f.Name,
-      type: this.libType(f.CollectionType),
-    }));
+    try {
+      const folders = await fetchJson<{ Name: string; ItemId?: string; CollectionType?: string }[]>(`${this.base}/Library/VirtualFolders`, { headers: this.headers() });
+      return folders.map((f) => ({
+        id: f.ItemId ?? f.Name,
+        provider: this.source.id,
+        name: f.Name,
+        type: this.libType(f.CollectionType),
+      }));
+    } catch (e) {
+      errs.push(`VirtualFolders: ${(e as Error).message}`);
+      throw new Error(errs.join(' | '));
+    }
   }
 
   async listItems(libraryId: string, opts: ListOpts = {}): Promise<ListResult> {
